@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>n9n - The Free n8n Alternative</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f; --bg-elevated: #12121a; --bg-card: #1a1a24;
+      --fg: #e8e8ed; --fg-muted: #6b6b7a; --accent: #00d4aa;
+      --border: #2a2a3a; --grid-color: rgba(42, 42, 58, 0.5);
+    }
+    .theme-light {
+      --bg: #f8f9fa; --bg-elevated: #ffffff; --bg-card: #ffffff;
+      --fg: #212529; --fg-muted: #6c757d; --accent: #00d4aa;
+      --border: #dee2e6; --grid-color: rgba(222, 226, 230, 0.5);
+    }
+    body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--fg); height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    .grid-bg { background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px); background-size: 24px 24px; }
+    
+    .node { position: absolute; width: 320px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: border-color 0.2s; user-select: none; }
+    .node:hover { border-color: var(--fg-muted); }
+    .node.selected { border-color: var(--accent); box-shadow: 0 0 20px rgba(0, 212, 170, 0.2); }
+    .node.running { border-color: #3b82f6; animation: pulse 1.5s infinite; }
+    .node.success { border-color: var(--accent); }
+    .node.error { border-color: #ef4444; }
+    
+    .handle { width: 16px; height: 16px; background: var(--bg); border: 2px solid var(--fg-muted); border-radius: 50%; position: absolute; top: 50%; transform: translateY(-50%); cursor: crosshair; z-index: 10; transition: all 0.2s; }
+    .handle:hover { border-color: var(--accent); transform: translateY(-50%) scale(1.2); }
+    .handle-left { left: -8px; }
+    .handle-right { right: -8px; }
+    
+    .connection { stroke: var(--accent); stroke-width: 2; fill: none; stroke-dasharray: 5,5; animation: dash 1s linear infinite; }
+    
+    .cat-logic { border-left: 4px solid #a855f7; }
+    .cat-action { border-left: 4px solid #3b82f6; }
+    .cat-integration { border-left: 4px solid #f59e0b; }
+    .cat-ai { border-left: 4px solid #8b5cf6; }
+    .cat-trigger { border-left: 4px solid #10b981; }
+    .cat-community { border-left: 4px solid #ec4899; }
+
+    .node-output {
+      background: rgba(0,0,0,0.2); border-top: 1px solid var(--border);
+      padding: 8px; font-size: 10px; max-height: 160px; overflow-y: auto;
+      color: var(--fg-muted); white-space: pre-wrap; word-break: break-all;
+    }
+
+    @keyframes dash { to { stroke-dashoffset: -10; } }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    
+    select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; -webkit-appearance: none; appearance: none; }
+    
+    .resize-handle { height: 4px; background: var(--border); cursor: ns-resize; transition: background 0.2s; flex-shrink: 0; }
+    .resize-handle:hover { background: var(--accent); }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-content { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; width: 600px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.2s; }
+    .modal-overlay.active .modal-content { transform: scale(1); }
+    
+    .community-badge { 
+      background: linear-gradient(135deg, #ec4899, #8b5cf6); 
+      color: white; 
+      font-size: 9px; 
+      padding: 1px 4px; 
+      border-radius: 4px; 
+      margin-left: 4px;
+      font-weight: 600;
+    }
+    
+    .github-user {
+      font-size: 10px;
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body class="flex flex-col">
+
+  <!-- Header -->
+  <header class="h-14 bg-[var(--bg-elevated)] border-b border-[var(--border)] flex items-center justify-between px-4 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#3b82f6] flex items-center justify-center text-black font-bold text-sm">n9</div>
+      <div class="flex flex-col">
+        <span class="font-semibold text-lg leading-tight">n9n</span>
+        <span class="text-[10px] text-[var(--fg-muted)] -mt-1">The Free n8n Alternative</span>
+      </div>
+      
+      <!-- Workflow Selector -->
+      <div class="flex items-center gap-2 ml-4">
+        <select id="workflowSelector" onchange="loadSelectedWorkflow()" class="bg-[var(--bg)] border border-[var(--border)] rounded px-8 py-1 text-sm">
+          <option value="">New Workflow</option>
+        </select>
+        <button onclick="saveCurrentWorkflow()" class="text-xs bg-[var(--bg-card)] border border-[var(--border)] px-2 py-1 rounded hover:bg-[var(--bg)] transition">Save</button>
+      </div>
+    </div>
+    <div class="flex gap-2 items-center">
+      <!-- Community Library Button -->
+      <button onclick="openCommunityLibrary()" class="p-2 text-[var(--fg-muted)] hover:text-white transition flex items-center gap-1" title="Community Node Library">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span class="text-xs hidden sm:inline">Library</span>
+      </button>
+      <button onclick="openSettings()" class="p-2 text-[var(--fg-muted)] hover:text-white transition" title="Settings">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </button>
+      <button onclick="toggleTheme()" class="p-2 text-[var(--fg-muted)] hover:text-white transition" title="Toggle Theme">
+        <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+      <button onclick="clearCanvas()" class="px-3 py-1.5 text-sm border border-[var(--border)] rounded hover:bg-[var(--bg-card)] transition">Clear</button>
+      <button onclick="runWorkflow()" id="runBtn" class="px-4 py-1.5 bg-[var(--accent)] text-black rounded font-medium text-sm hover:opacity-90 transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Run
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Sidebar -->
+    <aside class="w-72 bg-[var(--bg-elevated)] border-r border-[var(--border)] p-3 space-y-4 overflow-y-auto">
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">Triggers</h3>
+        <div id="cat-trigger"></div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">AI</h3>
+        <div id="cat-ai"></div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">Logic</h3>
+        <div id="cat-logic"></div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">Actions</h3>
+        <div id="cat-action"></div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">Integrations</h3>
+        <div id="cat-integration"></div>
+      </div>
+      
+      <!-- Community Nodes Section in Sidebar -->
+      <div id="sidebarCommunitySection" class="space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-[var(--fg-muted)] uppercase px-1">Community Nodes</h3>
+          <span class="community-badge text-[8px]">BETA</span>
+        </div>
+        <div id="cat-community" class="space-y-1"></div>
+      </div>
+    </aside>
+
+    <!-- Canvas -->
+    <main class="flex-1 relative overflow-hidden grid-bg" id="canvasContainer">
+      <svg id="connections" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;"></svg>
+      <div id="canvas" class="absolute inset-0" style="z-index: 1;"></div>
+    </main>
+
+    <!-- Config Panel -->
+    <aside id="configPanel" class="w-96 bg-[var(--bg-elevated)] border-l border-[var(--border)] p-4 overflow-y-auto hidden">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-semibold" id="configTitle">Config</h3>
+        <button onclick="closeConfig()" class="text-[var(--fg-muted)] hover:text-white text-xl">&times;</button>
+      </div>
+      <div id="suggestionBox" class="mb-4 p-2 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-blue-300"></div>
+      
+      <!-- Dynamic Config Form -->
+      <div id="configForm" class="space-y-4"></div>
+      
+      <!-- Dynamic Docs & Examples -->
+      <div id="docsArea" class="mt-6 pt-4 border-t border-[var(--border)] space-y-3"></div>
+    </aside>
+  </div>
+
+  <!-- Resize Handle -->
+  <div id="resizeHandle" class="resize-handle"></div>
+
+  <!-- Log Panel -->
+  <div id="logPanelContainer" style="height: 200px;" class="bg-[var(--bg-elevated)] border-t border-[var(--border)] overflow-hidden flex flex-col min-h-[50px]">
+    <div class="p-2 border-b border-[var(--border)] flex justify-between items-center">
+        <span class="text-xs font-bold text-[var(--fg-muted)]">OUTPUT LOG</span>
+        <button onclick="clearLogs()" class="text-[10px] text-[var(--fg-muted)] hover:text-white">Clear</button>
+    </div>
+    <div id="logPanel" class="flex-1 overflow-y-auto font-mono text-xs p-3">
+      <div class="text-[var(--fg-muted)]">n9n ready. The Free n8n Alternative.</div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-content p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold">Settings & Shortcuts</h2>
+        <button onclick="closeSettings()" class="text-[var(--fg-muted)] hover:text-white text-xl">&times;</button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-[var(--fg-muted)] mb-1">Default OpenRouter API Key</label>
+          <input type="text" id="settingsApiKey" placeholder="sk-or..." class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-sm">
+        </div>
+        
+        <div class="border-t border-[var(--border)] pt-4">
+          <div class="flex justify-between items-center mb-2">
+             <label class="block text-xs font-bold text-[var(--fg-muted)]">Prompt Shortcuts</label>
+             <button onclick="addPromptShortcut()" class="text-[10px] bg-[var(--accent)] text-black px-2 py-0.5 rounded">Add Shortcut</button>
+          </div>
+          <div id="promptShortcutsContainer" class="space-y-2"></div>
+          <p class="text-[10px] text-[var(--fg-muted)] mt-2">Type the shortcut in any Prompt field (e.g., /mykey) and press Space to replace it.</p>
+        </div>
+      </div>
+      
+      <button onclick="saveSettings()" class="w-full mt-6 bg-[var(--accent)] text-black rounded py-2 font-medium">Save Settings</button>
+    </div>
+  </div>
+
+  <!-- Community Library Modal -->
+  <div id="libraryModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4 p-6 pb-0">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <svg class="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            Community Node Library
+          </h2>
+          <p class="text-xs text-[var(--fg-muted)] mt-1">Discover and create custom nodes</p>
+        </div>
+        <button onclick="closeCommunityLibrary()" class="text-[var(--fg-muted)] hover:text-white text-xl">&times;</button>
+      </div>
+      
+      <div class="p-6 pt-2">
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-4 border-b border-[var(--border)]">
+          <button onclick="switchLibraryTab('browse')" id="tab-browse" class="px-4 py-2 text-sm font-medium text-[var(--accent)] border-b-2 border-[var(--accent)]">Browse</button>
+          <button onclick="switchLibraryTab('create')" id="tab-create" class="px-4 py-2 text-sm font-medium text-[var(--fg-muted)] hover:text-white">Create Node</button>
+          <button onclick="switchLibraryTab('my-nodes')" id="tab-my-nodes" class="px-4 py-2 text-sm font-medium text-[var(--fg-muted)] hover:text-white">My Nodes</button>
+        </div>
+        
+        <!-- Browse Tab -->
+        <div id="library-browse" class="space-y-4">
+          <div class="bg-[var(--bg)] p-3 rounded border border-[var(--border)]">
+            <div class="flex items-center gap-2 text-sm text-[var(--fg-muted)]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" placeholder="Search community nodes..." class="bg-transparent border-none outline-none flex-1 text-[var(--fg)]">
+            </div>
+          </div>
+          
+          <div id="communityNodesList" class="space-y-2 max-h-80 overflow-y-auto">
+            <!-- Community nodes will be rendered here -->
+            <div class="text-center py-8 text-[var(--fg-muted)]">
+              <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+              <p>No community nodes yet.</p>
+              <p class="text-xs mt-1">Be the first to create one!</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Create Node Tab -->
+        <div id="library-create" class="hidden space-y-4">
+          <div class="bg-blue-900/20 border border-blue-500/30 p-3 rounded text-xs text-blue-300">
+            <strong>Create a custom node!</strong> Your node will be saved locally and can be contributed to the community.
+          </div>
+          
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-[var(--fg-muted)] mb-1">Node Name *</label>
+              <input type="text" id="newNodeName" placeholder="My Custom Node" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-sm">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-[var(--fg-muted)] mb-1">Category *</label>
+                <select id="newNodeCategory" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-sm">
+                  <option value="trigger">Trigger</option>
+                  <option value="ai">AI</option>
+                  <option value="logic">Logic</option>
+                  <option value="action">Action</option>
+                  <option value="integration">Integration</option>
+                  <option value="community">Community</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-[var(--fg-muted)] mb-1">Icon Color</label>
+                <input type="color" id="newNodeColor" value="#ec4899" class="w-full h-9 bg-[var(--bg)] border border-[var(--border)] rounded cursor-pointer">
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-xs text-[var(--fg-muted)] mb-1">SVG Icon Path</label>
+              <textarea id="newNodeIcon" rows="2" placeholder='<path stroke-linecap="round" ... />' class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-xs mono"></textarea>
+              <p class="text-[10px] text-[var(--fg-muted)] mt-1">Find icons at heroicons.com or lucide.dev</p>
+            </div>
+            
+            <div>
+              <label class="block text-xs text-[var(--fg-muted)] mb-1">Description</label>
+              <input type="text" id="newNodeDesc" placeholder="What does this node do?" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-sm">
+            </div>
+            
+            <div>
+              <label class="block text-xs text-[var(--fg-muted)] mb-1">Your GitHub Username</label>
+              <input type="text" id="newNodeGithub" placeholder="johndoe" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-sm">
+              <p class="text-[10px] text-[var(--fg-muted)] mt-1">Shown on your node for recognition!</p>
+            </div>
+            
+            <div class="border-t border-[var(--border)] pt-3">
+              <label class="block text-xs font-bold text-[var(--fg-muted)] mb-2">Execute Function Code *</label>
+              <div class="bg-[var(--bg)] p-2 rounded border border-[var(--border)] text-xs mb-2">
+                <p class="text-[var(--fg-muted)]">Write JavaScript code for your node's execute function:</p>
+                <ul class="list-disc pl-4 mt-1 space-y-0.5 text-[10px]">
+                  <li><code>node</code> - The node instance with config</li>
+                  <li><code>inputData</code> - Data from previous node</li>
+                  <li>Use <code>n9n.addLog('message', 'info')</code> for logging</li>
+                  <li>Return the output data</li>
+                </ul>
+              </div>
+              <textarea id="newNodeCode" rows="10" class="w-full bg-[var(--bg)] border border-[var(--border)] rounded p-2 text-xs mono" placeholder="// Example: Simple text transform
+const text = inputData || '';
+const result = text.toUpperCase();
+n9n.addLog('Converted to uppercase', 'success');
+return result;"></textarea>
+            </div>
+          </div>
+          
+          <button onclick="createNewNode()" class="w-full bg-[var(--accent)] text-black rounded py-2 font-medium hover:opacity-90 transition">
+            Create Node & Save Locally
+          </button>
+        </div>
+        
+        <!-- My Nodes Tab -->
+        <div id="library-my-nodes" class="hidden space-y-4">
+          <div id="myNodesList" class="space-y-2">
+            <!-- User's custom nodes will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub Contribution Modal -->
+  <div id="githubModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="flex justify-between items-center mb-4 p-6 pb-0">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          Contribute to n9n
+        </h2>
+        <button onclick="closeGithubModal()" class="text-[var(--fg-muted)] hover:text-white text-xl">&times;</button>
+      </div>
+      
+      <div class="p-6 pt-2">
+        <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 p-4 rounded mb-4">
+          <h3 class="font-semibold mb-2">Awesome! You created a node. </h3>
+          <p class="text-sm text-[var(--fg-muted)]">Share it with the community and get recognized as a contributor!</p>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <h4 class="font-medium text-sm mb-2">Step 1: Review Your Node</h4>
+            <div class="bg-[var(--bg)] p-3 rounded border border-[var(--border)] text-xs">
+              <div id="githubNodePreview"></div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="font-medium text-sm mb-2">Step 2: Choose Contribution Method</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="openGitHubPullRequest()" class="p-3 bg-[var(--bg)] border border-[var(--border)] rounded hover:border-[var(--accent)] transition text-left">
+                <div class="font-medium text-sm">GitHub Pull Request</div>
+                <p class="text-[10px] text-[var(--fg-muted)] mt-1">For developers familiar with Git</p>
+              </button>
+              <button onclick="copyNodeCodeForIssue()" class="p-3 bg-[var(--bg)] border border-[var(--border)] rounded hover:border-[var(--accent)] transition text-left">
+                <div class="font-medium text-sm">Create Issue</div>
+                <p class="text-[10px] text-[var(--fg-muted)] mt-1">Paste code in a GitHub issue</p>
+              </button>
+            </div>
+          </div>
+          
+          <div class="bg-[var(--bg)] p-3 rounded border border-[var(--border)]">
+            <h4 class="font-medium text-sm mb-2">Quick Copy</h4>
+            <textarea id="githubNodeCode" rows="6" readonly class="w-full bg-black/30 border border-[var(--border)] rounded p-2 text-xs mono"></textarea>
+            <button onclick="copyToClipboard('githubNodeCode')" class="mt-2 text-xs bg-[var(--accent)] text-black px-3 py-1 rounded">Copy Code</button>
+          </div>
+          
+          <div class="text-xs text-[var(--fg-muted)] space-y-1">
+            <p><strong>How to write good documentation:</strong></p>
+            <ul class="list-disc pl-4 space-y-0.5">
+              <li>Describe what input the node expects</li>
+              <li>Explain what output the node produces</li>
+              <li>Provide an example use case</li>
+              <li>List any configuration options</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Load n9n Core System -->
+<script src="js/n9n.js"></script>
+
+<!-- Load Core Nodes -->
+<script src="nodes/core/manual-trigger.js"></script>
+<script src="nodes/core/static-data.js"></script>
+<script src="nodes/core/daily-trigger.js"></script>
+<script src="nodes/core/ask-ai.js"></script>
+<script src="nodes/core/ai-writer.js"></script>
+<script src="nodes/core/split-text.js"></script>
+<script src="nodes/core/loop-items.js"></script>
+<script src="nodes/core/loop-json.js"></script>
+<script src="nodes/core/delay.js"></script>
+<script src="nodes/core/text-formatter.js"></script>
+<script src="nodes/core/open-url.js"></script>
+<script src="nodes/core/web-scraper.js"></script>
+<script src="nodes/core/draft-email.js"></script>
+<script src="nodes/core/auto-email.js"></script>
+<script src="nodes/core/post-wordpress.js"></script>
+<script src="nodes/core/post-to-x.js"></script>
+<script src="nodes/core/post-linkedin.js"></script>
+<script src="nodes/core/insta-dm.js"></script>
+
+<!-- Load Example Community Node -->
+<script src="nodes/community/example-node.js"></script>
+
+<script>
+  // ==========================================
+  // STATE
+  // ==========================================
+  const state = {
+    nodes: [],
+    connections: [],
+    selectedNode: null,
+    context: {}, 
+    idCounter: 0,
+    pan: { x: 0, y: 0 }
+  };
+  
+  // Current node being contributed to GitHub
+  let currentContributionNode = null;
+
+  // ==========================================
+  // INIT & RENDER
+  // ==========================================
+  function init() {
+    loadState();
+    loadSettings();
+    loadWorkflowsList();
+    n9n.fetchModels().then(() => {
+      n9n.loadCustomNodes();
+      renderSidebar();
+      renderCommunityNodes();
+      setupCanvas();
+      setupLogResize();
+      renderCanvas();
+      applyTheme();
+    });
+  }
+
+  function renderSidebar() {
+    const categories = ['trigger', 'ai', 'logic', 'action', 'integration'];
+    categories.forEach(cat => {
+      const container = document.getElementById(`cat-${cat}`);
+      if(!container) return;
+      const items = n9n.getNodesByCategory(cat);
+      container.innerHTML = items.map(n => `
+        <div class="p-2 mb-1 bg-[var(--bg)] rounded border border-[var(--border)] hover:border-[var(--accent)] cursor-pointer transition text-sm flex items-center gap-2"
+             onclick="addNode('${n.id}', 100, 100)">
+          <div class="w-5 h-5 flex items-center justify-center" style="color: ${n.color}">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${n.icon}</svg>
+          </div>
+          <span>${n.name}</span>
+        </div>
+      `).join('');
+    });
+    
+    // Update community nodes in sidebar
+    const communitySection = document.getElementById('sidebarCommunitySection');
+    const communityContainer = document.getElementById('cat-community');
+    const communityNodes = n9n.getCommunityNodes();
+    
+    if (communityNodes.length > 0) {
+      communitySection.classList.remove('hidden');
+      communityContainer.innerHTML = communityNodes.map(n => `
+        <div class="p-2 mb-1 bg-[var(--bg)] rounded border border-[var(--border)] hover:border-[var(--accent)] cursor-pointer transition text-sm flex items-center gap-2"
+             onclick="addNode('${n.id}', 100, 100)">
+          <div class="w-5 h-5 flex items-center justify-center" style="color: ${n.color}">
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${n.icon}</svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1">
+              <span class="truncate">${n.name}</span>
+              <span class="community-badge">★</span>
+            </div>
+            ${n.githubUsername ? `<div class="github-user">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              ${n.githubUsername}
+            </div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    } else {
+      communitySection.classList.add('hidden');
+    }
+  }
+
+  // ==========================================
+  // COMMUNITY LIBRARY
+  // ==========================================
+  function openCommunityLibrary() {
+    document.getElementById('libraryModal').classList.add('active');
+    renderCommunityNodes();
+    renderMyNodes();
+  }
+  
+  function closeCommunityLibrary() {
+    document.getElementById('libraryModal').classList.remove('active');
+  }
+  
+  function switchLibraryTab(tab) {
+    // Hide all tabs
+    document.getElementById('library-browse').classList.add('hidden');
+    document.getElementById('library-create').classList.add('hidden');
+    document.getElementById('library-my-nodes').classList.add('hidden');
+    
+    // Reset tab styles
+    document.getElementById('tab-browse').classList.remove('text-[var(--accent)]', 'border-b-2', 'border-[var(--accent)]');
+    document.getElementById('tab-browse').classList.add('text-[var(--fg-muted)]');
+    document.getElementById('tab-create').classList.remove('text-[var(--accent)]', 'border-b-2', 'border-[var(--accent)]');
+    document.getElementById('tab-create').classList.add('text-[var(--fg-muted)]');
+    document.getElementById('tab-my-nodes').classList.remove('text-[var(--accent)]', 'border-b-2', 'border-[var(--accent)]');
+    document.getElementById('tab-my-nodes').classList.add('text-[var(--fg-muted)]');
+    
+    // Show selected tab
+    document.getElementById(`library-${tab}`).classList.remove('hidden');
+    document.getElementById(`tab-${tab}`).classList.remove('text-[var(--fg-muted)]');
+    document.getElementById(`tab-${tab}`).classList.add('text-[var(--accent)]', 'border-b-2', 'border-[var(--accent)]');
+  }
+  
+  function renderCommunityNodes() {
+    const container = document.getElementById('communityNodesList');
+    const communityNodes = n9n.getCommunityNodes();
+    
+    if (communityNodes.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-[var(--fg-muted)]">
+          <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          <p>No community nodes yet.</p>
+          <p class="text-xs mt-1">Be the first to create one!</p>
+          <button onclick="switchLibraryTab('create')" class="mt-3 text-xs bg-[var(--accent)] text-black px-3 py-1 rounded">Create Node</button>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = communityNodes.map(n => `
+      <div class="p-3 bg-[var(--bg)] rounded border border-[var(--border)] hover:border-[var(--accent)] transition">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 flex items-center justify-center rounded bg-[var(--bg-elevated)]" style="color: ${n.color}">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">${n.icon}</svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <h4 class="font-medium">${n.name}</h4>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--fg-muted)]">${n.category}</span>
+            </div>
+            <p class="text-xs text-[var(--fg-muted)] mt-0.5">${n.documentation?.description || 'No description'}</p>
+            ${n.githubUsername ? `
+              <div class="flex items-center gap-1 mt-1 text-[10px] text-[var(--fg-muted)]">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                <span>by ${n.githubUsername}</span>
+              </div>
+            ` : ''}
+          </div>
+          <button onclick="addNode('${n.id}', 100, 100)" class="text-xs bg-[var(--accent)] text-black px-3 py-1 rounded hover:opacity-90">Add</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function renderMyNodes() {
+    const container = document.getElementById('myNodesList');
+    const customNodes = n9n.getCustomNodes();
+    const nodeList = Object.values(customNodes);
+    
+    if (nodeList.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-[var(--fg-muted)]">
+          <p>You haven't created any custom nodes yet.</p>
+          <button onclick="switchLibraryTab('create')" class="mt-3 text-xs bg-[var(--accent)] text-black px-3 py-1 rounded">Create Your First Node</button>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = nodeList.map(n => `
+      <div class="p-3 bg-[var(--bg)] rounded border border-[var(--border)]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 flex items-center justify-center rounded bg-[var(--bg-elevated)]" style="color: ${n.color}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${n.icon}</svg>
+            </div>
+            <div>
+              <h4 class="font-medium text-sm">${n.name}</h4>
+              <p class="text-[10px] text-[var(--fg-muted)]">${n.category} • Created by you</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="prepareGitHubContribution('${n.id}')" class="text-xs bg-[var(--bg-elevated)] border border-[var(--border)] px-2 py-1 rounded hover:border-[var(--accent)] flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              Share
+            </button>
+            <button onclick="deleteCustomNode('${n.id}')" class="text-xs text-red-400 hover:text-red-300 px-2 py-1">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function createNewNode() {
+    const name = document.getElementById('newNodeName').value.trim();
+    const category = document.getElementById('newNodeCategory').value;
+    const color = document.getElementById('newNodeColor').value;
+    const icon = document.getElementById('newNodeIcon').value.trim();
+    const description = document.getElementById('newNodeDesc').value.trim();
+    const githubUsername = document.getElementById('newNodeGithub').value.trim();
+    const executeCode = document.getElementById('newNodeCode').value.trim();
+    
+    // Validation
+    if (!name) { alert('Node name is required'); return; }
+    if (!executeCode) { alert('Execute code is required'); return; }
+    
+    // Generate node ID
+    const nodeId = 'custom-' + name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4);
+    
+    // Default icon if not provided
+    const defaultIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>';
+    
+    const nodeDefinition = {
+      id: nodeId,
+      category: category,
+      name: name,
+      color: color,
+      icon: icon || defaultIcon,
+      config: {},
+      suggests: [],
+      githubUsername: githubUsername,
+      isCore: false,
+      documentation: {
+        description: description || `${name} - A custom community node`,
+        input: 'Any',
+        output: 'Any',
+        example: 'See node implementation'
+      },
+      executeString: executeCode
+    };
+    
+    try {
+      // Test parse the execute function
+      new Function('node', 'inputData', executeCode);
+      
+      // Save the node
+      n9n.saveCustomNode(nodeDefinition);
+      
+      // Update UI
+      renderSidebar();
+      renderMyNodes();
+      switchLibraryTab('my-nodes');
+      
+      // Clear form
+      document.getElementById('newNodeName').value = '';
+      document.getElementById('newNodeIcon').value = '';
+      document.getElementById('newNodeDesc').value = '';
+      document.getElementById('newNodeCode').value = '';
+      
+      alert('✅ Node created successfully! You can now use it in your workflows.');
+    } catch(e) {
+      alert('❌ Error in execute code: ' + e.message);
+    }
+  }
+  
+  function deleteCustomNode(nodeId) {
+    if (!confirm('Are you sure you want to delete this custom node?')) return;
+    
+    n9n.deleteCustomNode(nodeId);
+    
+    // Remove from canvas if present
+    state.nodes = state.nodes.filter(n => n.type !== nodeId);
+    saveState();
+    renderCanvas();
+    
+    renderSidebar();
+    renderMyNodes();
+    
+    n9n.addLog('Custom node deleted', 'info');
+  }
+
+  // ==========================================
+  // GITHUB CONTRIBUTION
+  // ==========================================
+  function prepareGitHubContribution(nodeId) {
+    const node = n9n.getNode(nodeId);
+    if (!node) return;
+    
+    currentContributionNode = node;
+    
+    // Show node preview
+    document.getElementById('githubNodePreview').innerHTML = `
+      <div class="flex items-center gap-2">
+        <div style="color: ${node.color}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${node.icon}</svg>
+        </div>
+        <span class="font-medium">${node.name}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)]">${node.category}</span>
+      </div>
+      <p class="text-[var(--fg-muted)] mt-1">${node.documentation?.description || ''}</p>
+    `;
+    
+    // Generate node file content
+    const fileContent = n9n.generateNodeFileContent(node);
+    document.getElementById('githubNodeCode').value = fileContent;
+    
+    closeCommunityLibrary();
+    document.getElementById('githubModal').classList.add('active');
+  }
+  
+  function closeGithubModal() {
+    document.getElementById('githubModal').classList.remove('active');
+    currentContributionNode = null;
+  }
+  
+  function openGitHubPullRequest() {
+    if (!currentContributionNode) return;
+    
+    const repoUrl = 'https://github.com/adityagupta29/n9n'; 
+    const fileName = `${currentContributionNode.id}.js`;
+    const filePath = `nodes/community/${fileName}`;
+    
+    alert(`To contribute via Pull Request:\n\n1. Fork the repository: ${repoUrl}\n2. Create a new file: ${filePath}\n3. Copy the code from the textarea below\n4. Commit and create a Pull Request\n\nYour contribution will be reviewed and merged!`);
+    
+    // Copy code to clipboard
+    copyToClipboard('githubNodeCode');
+    
+    // Open GitHub in new tab
+    window.open(repoUrl + '/fork', '_blank');
+  }
+  
+  function copyNodeCodeForIssue() {
+    if (!currentContributionNode) return;
+    
+    const repoUrl = 'https://github.com/adityagupta29/n9n'; 
+    const fileContent = document.getElementById('githubNodeCode').value;
+    
+    const issueBody = `## New Community Node: ${currentContributionNode.name}
+
+**Category:** ${currentContributionNode.category}
+**Author:** ${currentContributionNode.githubUsername || 'Anonymous'}
+
+### Description
+${currentContributionNode.documentation?.description || 'No description provided'}
+
+### Node Code
+\`\`\`javascript
+${fileContent}
+\`\`\`
+
+---
+*This node was created using the n9n Community Node Builder*`;
+
+    const issueUrl = `${repoUrl}/issues/new?title=${encodeURIComponent(`[Community Node] ${currentContributionNode.name}`)}&body=${encodeURIComponent(issueBody)}`;
+    
+    window.open(issueUrl, '_blank');
+  }
+  
+  function copyToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    el.select();
+    document.execCommand('copy');
+    
+    // Show feedback
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = originalText, 1500);
+  }
+
+  // ==========================================
+  // CANVAS & UI
+  // ==========================================
+  function setupCanvas() {
+    const canvasContainer = document.getElementById('canvasContainer');
+    
+    canvasContainer.addEventListener('mousedown', e => {
+       if(e.target.id === 'canvasContainer' || e.target.id === 'canvas' || e.target.tagName === 'svg') {
+          state.isPanning = true;
+          state.panStart = { x: e.clientX - state.pan.x, y: e.clientY - state.pan.y };
+          canvasContainer.style.cursor = 'grabbing';
+       }
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (state.isPanning) {
+         state.pan.x = e.clientX - state.panStart.x;
+         state.pan.y = e.clientY - state.panStart.y;
+         renderCanvas();
+      }
+      
+      if (state.dragging) {
+        state.dragging.x = e.clientX - state.dragOffset.x - state.pan.x;
+        state.dragging.y = e.clientY - state.dragOffset.y - state.pan.y;
+        renderCanvas();
+      } else if (state.connecting) {
+        renderConnections({ x: e.clientX, y: e.clientY });
+      }
+    });
+    
+    window.addEventListener('mouseup', () => {
+      if(state.dragging) saveState();
+      state.dragging = null;
+      if(state.isPanning) saveState();
+      state.isPanning = false;
+      document.getElementById('canvasContainer').style.cursor = 'default';
+      
+      if (state.connecting) { state.connecting = null; renderConnections(); }
+    });
+  }
+
+  function setupLogResize() {
+     const handle = document.getElementById('resizeHandle');
+     const container = document.getElementById('logPanelContainer');
+     let startY, startHeight;
+     
+     handle.addEventListener('mousedown', e => {
+        startY = e.clientY;
+        startHeight = container.offsetHeight;
+        document.addEventListener('mousemove', resizeMove);
+        document.addEventListener('mouseup', resizeUp);
+     });
+     
+     function resizeMove(e) {
+        const diff = startY - e.clientY;
+        container.style.height = (startHeight + diff) + 'px';
+     }
+     
+     function resizeUp() {
+        document.removeEventListener('mousemove', resizeMove);
+        document.removeEventListener('mouseup', resizeUp);
+     }
+  }
+
+  function addNode(type, x, y) {
+    const def = n9n.getNode(type);
+    if (!def) {
+      n9n.addLog(`Unknown node type: ${type}`, 'error');
+      return;
+    }
+    
+    state.nodes.push({
+      id: `node_${++state.idCounter}`,
+      type, 
+      name: def.name, 
+      color: def.color, 
+      icon: def.icon, 
+      cat: def.category,
+      x: x - state.pan.x, 
+      y: y - state.pan.y, 
+      config: { ...def.config }, 
+      status: 'idle', 
+      lastOutput: null
+    });
+    renderCanvas();
+    openConfig(`node_${state.idCounter}`);
+    saveState();
+    
+    // Close library if open
+    closeCommunityLibrary();
+  }
+
+  function renderCanvas() {
+    const canvas = document.getElementById('canvas');
+    canvas.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px)`;
+    
+    canvas.innerHTML = state.nodes.map(node => {
+      const selected = state.selectedNode === node.id ? 'selected' : '';
+      const statusClass = `node-${node.status}`;
+      const catClass = `cat-${node.cat}`;
+      
+      let outputDisplay = '';
+      if (node.lastOutput) {
+        let outStr = typeof node.lastOutput === 'object' ? JSON.stringify(node.lastOutput, null, 2) : String(node.lastOutput);
+        outputDisplay = `<div class="node-output mono">${outStr}</div>`;
+      }
+      
+      return `
+        <div class="node ${selected} ${statusClass} ${catClass}" style="left: ${node.x}px; top: ${node.y}px;" 
+             onmousedown="startDrag(event, '${node.id}')" onclick="openConfig('${node.id}')">
+          <div class="handle handle-left" onmousedown="startConnection(event, '${node.id}', 'input')" onmouseup="endConnection(event, '${node.id}', 'input')"></div>
+          <div class="handle handle-right" onmousedown="startConnection(event, '${node.id}', 'output')" onmouseup="endConnection(event, '${node.id}', 'output')"></div>
+          <div class="p-3 border-b border-[var(--border)] flex items-center gap-2">
+            <svg class="w-5 h-5" style="color: ${node.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${node.icon}</svg>
+            <span class="font-semibold text-sm">${node.name}</span>
+          </div>
+          <div class="p-3 text-xs text-[var(--fg-muted)]">${getNodePreview(node)}</div>
+          ${outputDisplay}
+        </div>
+      `;
+    }).join('');
+    renderConnections();
+  }
+
+  function getNodePreview(node) {
+    if (node.status === 'running') return '<span class="text-blue-400">Processing...</span>';
+    if (node.type.includes('ask-ai') || node.type.includes('ai-writer')) return `Model: ${node.config.model || 'Default'}`;
+    if (node.type === 'text-formatter') {
+       let count = node.config.rules ? node.config.rules.length : 0;
+       return `Rules: ${count} | Mode: ${node.config.outputType === 'extract' ? 'Text' : 'JSON'}`;
+    }
+    if (node.type === 'static-data') return `Data: ${(node.config.data || '').substring(0, 20)}...`;
+    if (node.type.includes('loop')) return `Delay: ${node.config.delay}ms`;
+    if (node.type.includes('email')) return `To: ${node.config.to}`;
+    if (node.type === 'open-url') return `URL: ${node.config.baseUrl?.substring(0, 25)}...`;
+    if (node.type === 'web-scraper') return `URL: ${node.config.url?.substring(0, 20)}...`;
+    
+    // Check if it's a custom node
+    const def = n9n.getNode(node.type);
+    if (def && !def.isCore) {
+      return `<span class="text-pink-400">Community Node</span>`;
+    }
+    
+    return 'Configure...';
+  }
+
+  function startDrag(e, id) {
+    if (e.target.classList.contains('handle')) return;
+    e.stopPropagation();
+    state.dragging = state.nodes.find(n => n.id === id);
+    state.dragOffset = { x: e.clientX - state.dragging.x - state.pan.x, y: e.clientY - state.dragging.y - state.pan.y };
+  }
+
+  function startConnection(e, id, handle) { e.stopPropagation(); state.connecting = { id, handle }; }
+
+  function endConnection(e, targetId, targetHandle) {
+    if (!state.connecting) return;
+    const sourceId = state.connecting.id;
+    const sourceHandle = state.connecting.handle;
+    if (sourceId !== targetId && sourceHandle === 'output' && targetHandle === 'input') {
+      state.connections = state.connections.filter(c => c.target !== targetId);
+      state.connections.push({ source: sourceId, target: targetId });
+    }
+    state.connecting = null;
+    renderConnections();
+    saveState();
+  }
+
+  function renderConnections(mousePos) {
+    const svg = document.getElementById('connections');
+    svg.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px)`;
+    
+    let paths = state.connections.map(conn => {
+      const source = state.nodes.find(n => n.id === conn.source);
+      const target = state.nodes.find(n => n.id === conn.target);
+      if (!source || !target) return '';
+      const x1 = source.x + 320; const y1 = source.y + 40;
+      const x2 = target.x; const y2 = target.y + 40;
+      return `<path d="M ${x1} ${y1} C ${x1+50} ${y1}, ${x2-50} ${y2}, ${x2} ${y2}" class="connection" />`;
+    }).join('');
+
+    if (state.connecting && mousePos) {
+      const source = state.nodes.find(n => n.id === state.connecting.id);
+      if (source) {
+        const rect = document.getElementById('canvasContainer').getBoundingClientRect();
+        const x1 = source.x + 320; const y1 = source.y + 40;
+        const x2 = mousePos.x - rect.left - state.pan.x; const y2 = mousePos.y - rect.top - state.pan.y;
+        paths += `<path d="M ${x1} ${y1} C ${x1+50} ${y1}, ${x2-50} ${y2}, ${x2} ${y2}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5,5" fill="none" />`;
+      }
+    }
+    svg.innerHTML = paths;
+  }
+
+  // ==========================================
+  // CONFIG & DOCS
+  // ==========================================
+  function openConfig(id) {
+    const node = state.nodes.find(n => n.id === id);
+    state.selectedNode = id;
+    renderCanvas();
+    
+    const panel = document.getElementById('configPanel');
+    panel.classList.remove('hidden');
+    
+    const def = n9n.getNode(node.type);
+    const suggestionBox = document.getElementById('suggestionBox');
+    if (def && def.suggests && def.suggests.length > 0) {
+      const names = def.suggests.map(s => n9n.getNode(s)?.name).filter(Boolean).join(', ');
+      suggestionBox.innerHTML = `<strong>Next Step:</strong> Connect to <span class="text-[var(--accent)]">${names}</span>`;
+      suggestionBox.classList.remove('hidden');
+    } else { suggestionBox.classList.add('hidden'); }
+    
+    document.getElementById('docsArea').innerHTML = generateDocs(node.type, def);
+    document.getElementById('configForm').innerHTML = generateConfigForm(node);
+  }
+
+  function generateConfigForm(node) {
+    const def = n9n.getNode(node.type);
+    if (!def) return '<div class="text-red-400">Unknown node type</div>';
+    
+    let html = `<div class="space-y-4 text-sm">`;
+    
+    // Use node's custom config form generator if available
+    if (def.generateConfigForm) {
+      html += def.generateConfigForm(node);
+    }
+    
+    html += `<button onclick="deleteNode('${node.id}')" class="w-full mt-4 py-2 border border-red-500/30 text-red-400 rounded text-xs hover:bg-red-500/10">Delete</button></div>`;
+    return html;
+  }
+
+  function generateDocs(type, def) {
+    if (!def || !def.documentation) return '';
+    
+    const doc = def.documentation;
+    const githubBadge = def.githubUsername ? `
+      <div class="flex items-center gap-1 text-[10px] text-pink-400 mt-2">
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        Community node by ${def.githubUsername}
+      </div>
+    ` : '';
+    
+    return `
+      <h4 class="font-bold text-[var(--accent)]">${def.name}</h4>
+      <div class="text-xs text-[var(--fg-muted)] space-y-2 mt-2 bg-[var(--bg)] p-3 rounded border border-[var(--border)]">
+        <p>${doc.description || 'No description available.'}</p>
+        ${doc.input ? `<p><strong>Input:</strong> ${doc.input}</p>` : ''}
+        ${doc.output ? `<p><strong>Output:</strong> ${doc.output}</p>` : ''}
+        ${doc.example ? `<div class="bg-black/30 p-2 rounded mono text-[10px] mt-2">${doc.example}</div>` : ''}
+        ${githubBadge}
+      </div>
+    `;
+  }
+
+  function closeConfig() { document.getElementById('configPanel').classList.add('hidden'); state.selectedNode = null; renderCanvas(); }
+  
+  function deleteNode(id) { 
+    state.nodes = state.nodes.filter(n => n.id !== id); 
+    state.connections = state.connections.filter(c => c.source !== id && c.target !== id); 
+    closeConfig(); renderCanvas(); saveState(); 
+  }
+
+  // ==========================================
+  // STATE MANAGEMENT
+  // ==========================================
+  function saveState() { 
+    try { 
+      localStorage.setItem('n9n_state', JSON.stringify({ 
+        nodes: state.nodes, 
+        connections: state.connections, 
+        idCounter: state.idCounter, 
+        pan: state.pan 
+      })); 
+    } catch (e) {} 
+  }
+  
+  function loadState() {
+    const saved = localStorage.getItem('n9n_state');
+    if (saved) { 
+      const s = JSON.parse(saved); 
+      state.nodes = s.nodes || []; 
+      state.connections = s.connections || []; 
+      state.idCounter = s.idCounter || 0; 
+      state.pan = s.pan || {x:0, y:0}; 
+    }
+  }
+  
+  function loadSettings() {
+    const saved = localStorage.getItem('n9n_settings');
+    if(saved) {
+      n9n.userSettings = JSON.parse(saved);
+    }
+  }
+  
+  // Expose update config to global for node files
+  window.appUpdateConfig = function(id, key, value) {
+    const node = state.nodes.find(n => n.id === id);
+    if (node) {
+      node.config[key] = value;
+      renderCanvas();
+      saveState();
+    }
+  };
+  
+  window.appAddFormatterRule = function(id) {
+    const node = state.nodes.find(n => n.id === id);
+    if(node) {
+      if(!node.config.rules) node.config.rules = [];
+      node.config.rules.push({ find: '', replace: '' });
+      saveState();
+      openConfig(id); 
+    }
+  };
+  
+  window.appRemoveFormatterRule = function(id, index) {
+    const node = state.nodes.find(n => n.id === id);
+    if(node && node.config.rules) {
+      node.config.rules.splice(index, 1);
+      saveState();
+      openConfig(id); 
+    }
+  };
+  
+  window.appUpdateRule = function(id, index, key, value) {
+    const node = state.nodes.find(n => n.id === id);
+    if(node && node.config.rules && node.config.rules[index]) {
+      node.config.rules[index][key] = value;
+      saveState();
+    }
+  };
+
+  // ==========================================
+  // WORKFLOW MANAGEMENT
+  // ==========================================
+  function loadWorkflowsList() {
+     const saved = localStorage.getItem('n9n_workflows');
+     const workflows = saved ? JSON.parse(saved) : [];
+     const select = document.getElementById('workflowSelector');
+     select.innerHTML = '<option value="">New Workflow</option>';
+     workflows.forEach((wf, i) => {
+        select.innerHTML += `<option value="${i}">${wf.name}</option>`;
+     });
+  }
+
+  function saveCurrentWorkflow() {
+     const name = prompt("Save workflow as:", "My Flow");
+     if(!name) return;
+     
+     const saved = localStorage.getItem('n9n_workflows');
+     let workflows = saved ? JSON.parse(saved) : [];
+     
+     const stateData = { nodes: state.nodes, connections: state.connections, idCounter: state.idCounter, pan: state.pan };
+     
+     const existingIndex = workflows.findIndex(w => w.name === name);
+     if(existingIndex > -1) {
+        workflows[existingIndex].state = stateData;
+     } else {
+        workflows.push({ name: name, state: stateData });
+     }
+     
+     localStorage.setItem('n9n_workflows', JSON.stringify(workflows));
+     loadWorkflowsList();
+     document.getElementById('workflowSelector').value = existingIndex > -1 ? existingIndex : workflows.length - 1;
+     n9n.addLog(`Workflow "${name}" saved.`, 'success');
+  }
+  
+  function loadSelectedWorkflow() {
+     const index = document.getElementById('workflowSelector').value;
+     if(index === "") {
+        state.nodes = []; state.connections = []; state.idCounter = 0; state.pan = {x:0,y:0};
+        renderCanvas();
+        saveState();
+        n9n.addLog('New workflow initialized.', 'info');
+        return;
+     }
+     
+     const saved = localStorage.getItem('n9n_workflows');
+     const workflows = saved ? JSON.parse(saved) : [];
+     const wf = workflows[index];
+     
+     if(wf && wf.state) {
+        state.nodes = wf.state.nodes || [];
+        state.connections = wf.state.connections || [];
+        state.idCounter = wf.state.idCounter || 0;
+        state.pan = wf.state.pan || {x:0,y:0};
+        renderCanvas();
+        saveState();
+        n9n.addLog(`Loaded workflow: ${wf.name}`, 'success');
+     }
+  }
+  
+  // ==========================================
+  // SETTINGS & THEME
+  // ==========================================
+  function openSettings() {
+     document.getElementById('settingsApiKey').value = n9n.userSettings.apiKey || '';
+     renderPromptShortcuts();
+     document.getElementById('settingsModal').classList.add('active');
+  }
+  
+  function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+  
+  function saveSettings() {
+     n9n.userSettings.apiKey = document.getElementById('settingsApiKey').value;
+     localStorage.setItem('n9n_settings', JSON.stringify(n9n.userSettings));
+     closeSettings();
+     n9n.addLog('Settings saved.', 'success');
+  }
+  
+  function renderPromptShortcuts() {
+     const c = document.getElementById('promptShortcutsContainer');
+     c.innerHTML = n9n.userSettings.promptShortcuts.map((s, i) => `
+        <div class="flex gap-2 items-center">
+           <input type="text" value="${s.key}" onchange="updateShortcut(${i}, 'key', this.value)" class="w-1/3 bg-[var(--bg)] border border-[var(--border)] rounded p-1 text-xs" placeholder="shortcut">
+           <input type="text" value="${s.value}" onchange="updateShortcut(${i}, 'value', this.value)" class="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded p-1 text-xs" placeholder="Prompt text...">
+           <button onclick="removeShortcut(${i})" class="text-red-400">&times;</button>
+        </div>
+     `).join('');
+  }
+  
+  function addPromptShortcut() { n9n.userSettings.promptShortcuts.push({key:'', value:''}); renderPromptShortcuts(); }
+  function removeShortcut(i) { n9n.userSettings.promptShortcuts.splice(i,1); renderPromptShortcuts(); }
+  function updateShortcut(i, k, v) { n9n.userSettings.promptShortcuts[i][k] = v; }
+
+  function toggleTheme() {
+     document.body.classList.toggle('theme-light');
+     const isLight = document.body.classList.contains('theme-light');
+     localStorage.setItem('n9n_theme', isLight ? 'light' : 'dark');
+     applyTheme();
+  }
+  
+  function applyTheme() {
+     const theme = localStorage.getItem('n9n_theme');
+     const icon = document.getElementById('themeIcon');
+     if(theme === 'light') {
+        document.body.classList.add('theme-light');
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>`;
+     } else {
+        document.body.classList.remove('theme-light');
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>`;
+     }
+  }
+
+  // ==========================================
+  // EXECUTION
+  // ==========================================
+  async function runWorkflow() {
+    state.nodes.forEach(n => { n.status = 'idle'; n.lastOutput = null; });
+    state.context = {};
+    renderCanvas();
+    n9n.addLog('--- Starting Workflow ---', 'info');
+    
+    const startNode = state.nodes.find(n => !state.connections.some(c => c.target === n.id));
+    if (!startNode) { n9n.addLog('No start node found.', 'error'); return; }
+
+    try {
+      await executeChain(startNode, null);
+      n9n.addLog('--- Workflow Completed ---', 'success');
+    } catch(e) {
+      n9n.addLog(`Workflow Crashed: ${e.message}`, 'error');
+    }
+  }
+
+  async function executeChain(node, inputData) {
+    node.status = 'running';
+    renderCanvas();
+    
+    try {
+      const result = await executeNodeLogic(node, inputData);
+      state.context[node.id] = result;
+      node.lastOutput = result;
+      node.status = 'success';
+      renderCanvas();
+
+      if (node.type === 'loop-json' || node.type === 'loop-items' || node.cat === 'logic' && n9n.getNode(node.type)?.category === 'logic') {
+        const nodeDef = n9n.getNode(node.type);
+        if (nodeDef && (nodeDef.id === 'loop-json' || nodeDef.id === 'loop-items')) {
+          const items = Array.isArray(inputData) ? inputData : [inputData];
+          n9n.addLog(`Looping ${items.length} items...`, 'info');
+          
+          const conn = state.connections.find(c => c.source === node.id);
+          if (conn) {
+            const nextNode = state.nodes.find(n => n.id === conn.target);
+            if (nextNode) {
+              for (let i = 0; i < items.length; i++) {
+                n9n.addLog(`Item ${i+1}: ${JSON.stringify(items[i]).substring(0,40)}...`, 'info');
+                await executeChain(nextNode, items[i]);
+                if (i < items.length - 1) await new Promise(r => setTimeout(r, node.config.delay || 1000));
+              }
+            }
+          }
+          return; 
+        }
+      } 
+      
+      const conn = state.connections.find(c => c.source === node.id);
+      if (conn) {
+        const nextNode = state.nodes.find(n => n.id === conn.target);
+        if (nextNode) await executeChain(nextNode, result);
+      }
+
+    } catch (e) {
+      node.status = 'error';
+      node.lastOutput = e.message;
+      renderCanvas();
+      throw e;
+    }
+  }
+
+  async function executeNodeLogic(node, inputData) {
+    const nodeDef = n9n.getNode(node.type);
+    if (!nodeDef) {
+      throw new Error(`Unknown node type: ${node.type}`);
+    }
+    
+    // Execute the node's execute function
+    if (nodeDef.execute) {
+      return await nodeDef.execute(node, inputData);
+    }
+    
+    throw new Error(`Node ${node.type} has no execute function`);
+  }
+
+  function clearLogs() { document.getElementById('logPanel').innerHTML = ''; n9n.addLog('Log cleared.', 'info'); }
+  
+  function clearCanvas() {
+    if(confirm('Clear entire canvas?')) {
+      state.nodes=[]; state.connections=[]; state.pan={x:0,y:0}; state.idCounter=0; 
+      renderCanvas(); saveState(); 
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
