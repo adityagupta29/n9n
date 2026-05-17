@@ -2,9 +2,9 @@
 
 A free, open-source workflow automation tool with a powerful visual node-based interface. Built for the community, by the community.
 
-![n9n Logo](./assets/logo.png)
+![n9n Logo](./assets/logo.svg)
 
-## 🚀 Features
+## Features
 
 - **Visual Workflow Builder** - Drag and drop nodes to create automated workflows
 - **AI Integration** - Built-in AI nodes powered by OpenRouter (GPT-4, Claude, Llama, etc.)
@@ -14,7 +14,7 @@ A free, open-source workflow automation tool with a powerful visual node-based i
 - **Community Nodes** - Create and share custom nodes with the community
 - **Free & Open Source** - No subscriptions, no limits
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 n9n/
@@ -33,7 +33,7 @@ n9n/
 └── README.md
 ```
 
-## 🎯 Available Core Nodes
+## Available Core Nodes
 
 ### Triggers
 - **Manual Trigger** - Start workflow with button click
@@ -63,7 +63,7 @@ n9n/
 - **Post to LinkedIn** - Share on LinkedIn
 - **Instagram DM** - Open Instagram DM threads
 
-## 🛠️ Creating Custom Nodes
+## Creating Custom Nodes
 
 ### Method 1: Using the Node Builder (Recommended for Beginners)
 
@@ -146,7 +146,7 @@ n9n.registerNode({
 });
 ```
 
-## 🤝 Contributing Nodes to the Community
+## Contributing Nodes to the Community
 
 ### Via GitHub Pull Request (Recommended)
 
@@ -179,16 +179,16 @@ n9n.registerNode({
 
 ### Node Contribution Guidelines
 
-- ✅ Nodes should have clear, descriptive names
-- ✅ Include documentation (description, input, output, example)
-- ✅ Use consistent code style
-- ✅ Test your node thoroughly
-- ✅ Add your GitHub username for attribution
-- ✅ Choose appropriate category
+- Nodes should have clear, descriptive names
+- Include documentation (description, input, output, example)
+- Use consistent code style
+- Test your node thoroughly
+- Add your GitHub username for attribution
+- Choose appropriate category
 - ❌ No malicious code
 - ❌ No hardcoded API keys (use config)
 
-## 📝 Node Template
+## Node Template
 
 ```javascript
 /**
@@ -223,7 +223,7 @@ n9n.registerNode({
 });
 ```
 
-## 🔧 Available Helper Functions
+## Available Helper Functions
 
 Inside your node's execute function, you have access to:
 
@@ -246,7 +246,7 @@ const options = n9n.getModelsOptions(selectedModel);
 const apiKey = n9n.userSettings.apiKey;
 ```
 
-## 🎨 Node Categories
+## Node Categories
 
 | Category | Description | Color Code |
 |----------|-------------|------------|
@@ -257,7 +257,7 @@ const apiKey = n9n.userSettings.apiKey;
 | `integration` | External services | `#f59e0b` (Orange) |
 | `community` | User-contributed | `#ec4899` (Pink) |
 
-## 🔐 Settings
+## Settings
 
 Click the **⚙️ Settings** button to configure:
 
@@ -266,7 +266,7 @@ Click the **⚙️ Settings** button to configure:
 
 Settings are saved to browser localStorage.
 
-## 💾 Storage
+## Storage
 
 n9n uses browser localStorage for:
 - Workflow states
@@ -276,7 +276,7 @@ n9n uses browser localStorage for:
 
 **Note:** Clear your browser data will erase your workflows. Export important workflows!
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Node not appearing?
 - Check browser console for errors
@@ -292,7 +292,7 @@ n9n uses browser localStorage for:
 - Update the repository URL in the code
 - Ensure you're logged into GitHub
 
-## 🚧 Roadmap
+## Roadmap
 
 - [ ] Server-side execution
 - [ ] Webhook triggers
@@ -302,7 +302,7 @@ n9n uses browser localStorage for:
 - [ ] Workflow sharing
 - [ ] Team collaboration
 
-## 🤝 Contributing to n9n Core
+## Contributing to n9n Core
 
 Want to improve n9n itself? We welcome contributions!
 
@@ -314,7 +314,7 @@ Want to improve n9n itself? We welcome contributions!
 6. Push: `git push origin feature/amazing-feature`
 7. Open a Pull Request
 
-## 📜 License
+## License
 
 This project is source-available for learning and personal use only.
 
@@ -322,12 +322,11 @@ Commercial usage, resale, SaaS hosting, redistribution, or monetization is prohi
 
 © 2026 Aditya Gupta
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by [n8n](https://n8n.io)
 - Icons from [Heroicons](https://heroicons.com)
 - AI powered by [OpenRouter](https://openrouter.ai)
-- Built by the community ❤️
 
 ---
 
