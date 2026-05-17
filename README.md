@@ -1,8 +1,53 @@
-# n9n - The Free n8n Alternative
+<p align="center">
+  <img src="./assets/logo.svg" width="120" alt="n9n Logo" />
+</p>
 
-A free, open-source workflow automation tool with a powerful visual node-based interface. Built for the community, by the community.
+<h1 align="center">n9n</h1>
 
-![n9n Logo](./assets/logo.svg)
+<p align="center">
+  The Free n8n Alternative
+</p>
+
+<p align="center">
+  A free, open-source workflow automation tool with a powerful visual node-based interface.<br>
+  Built for the community, by the community.
+</p>
+
+<p align="center">
+  <a href="https://adityagupta29.github.io/n9n/">
+    <img src="https://img.shields.io/badge/Live%20Demo-Open%20App-00d4aa?style=for-the-badge&logo=googlechrome&logoColor=white" />
+  </a>
+
+  <a href="https://github.com/adityagupta29/n9n/releases">
+    <img src="https://img.shields.io/github/v/release/adityagupta29/n9n?style=for-the-badge&color=00a8ff" />
+  </a>
+
+   <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-Non--Commercial-111827?style=for-the-badge" />
+  </a>
+</p>
+
+
+<p align="center">
+  <img src="./assets/n9n.gif" width="100%" alt="n9n Demo" />
+</p>
+
+---
+
+## Live Demo
+
+Try n9n instantly without installing anything.
+
+<p align="center">
+  <a href="https://adityagupta29.github.io/n9n">
+    <img src="https://img.shields.io/badge/Open%20n9n%20Web%20App-00d4aa?style=for-the-badge&logo=vercel&logoColor=white" />
+  </a>
+</p>
+
+<p align="center">
+  No signup required.<br>
+  Your workflows and data stay inside your browser.
+</p>
 
 ## Features
 
@@ -20,16 +65,16 @@ A free, open-source workflow automation tool with a powerful visual node-based i
 n9n/
 ├── index.html              # Main application file
 ├── js/
-│   └── n9n.js             # Core node system and registry
+│   └── n9n.js              # Core node system and registry
 ├── nodes/
-│   ├── core/              # Built-in core nodes
+│   ├── core/               # Built-in core nodes
 │   │   ├── manual-trigger.js
 │   │   ├── ask-ai.js
 │   │   ├── post-to-x.js
 │   │   └── ... (18 core nodes)
-│   └── community/         # Community-contributed nodes
+│   └── community/          # Community-contributed nodes
 │       └── (your custom nodes here)
-├── css/                   # Styles (if needed)
+├── css/                    # Styles (if needed)
 └── README.md
 ```
 
@@ -330,6 +375,6 @@ Commercial usage, resale, SaaS hosting, redistribution, or monetization is prohi
 
 ---
 
-**Made with ❤️ by the n9n Community**
+**Built by the n9n community.**
 
 [GitHub](https://github.com/adityagupta29/n9n) • [Issues](https://github.com/adityagupta29/n9n/issues) • [Discussions](https://github.com/adityagupta29/n9n/discussions)
