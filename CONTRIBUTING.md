@@ -25,7 +25,7 @@ Help improve the n9n core:
 
 Found a bug? Have an idea?
 
-- [Open an Issue](https://github.com/yourusername/n9n/issues)
+- [Open an Issue](https://github.com/adityagupta29/n9n/issues)
 - Describe the problem clearly
 - Include steps to reproduce
 - Suggest a solution if possible
