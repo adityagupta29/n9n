@@ -151,7 +151,6 @@ Contributors will be:
 
 ## Questions?
 
-- [Discussions](https://github.com/yourusername/n9n/discussions)
-- [Discord](https://discord.gg/n9n) (if available)
+- [Discussions](https://github.com/adityagupta29/n9n/discussions)
 
 Thank you for making n9n better! 🚀
